@@ -1,0 +1,60 @@
+services:
+  # LibreTranslate service for subtitle translation
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    container_name: libretranslate
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      LT_CHAR_LIMIT: 5000
+      LT_REQ_LIMIT: 100
+      LT_LOAD_ONLY: en,es,fr,de,it,pt,ru,zh,ja,ko
+    volumes:
+      - libretranslate-data:/home/libretranslate/.local
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Auto-subtitler application
+  auto-subtitler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auto-subtitler
+    restart: unless-stopped
+    depends_on:
+      libretranslate:
+        condition: service_healthy
+    environment:
+      - WHISPER_MODEL=${WHISPER_MODEL:-medium}
+      - LIBRETRANSLATE_URL=http://libretranslate:5000/translate
+      - SOURCE_LANG=${SOURCE_LANG:-en}
+      - TARGET_LANG=${TARGET_LANG:-es}
+      - INPUT_DIR=/app/input
+      - OUTPUT_DIR=/app/output
+    volumes:
+      # Input/Output directories
+      - ./input:/app/input
+      - ./output:/app/output
+      # Whisper model cache (persists downloaded models)
+      - whisper-models:/root/.cache/whisper
+      # Translation cache directory (persists translations)
+      - ./translation_cache:/app/translation_cache
+    ports:
+      - "8080:8080"
+    stdin_open: true
+    tty: true
+    command: python web_app.py  # Start web server instead of keeping container idle
+
+volumes:
+  # Persistent storage for LibreTranslate data
+  libretranslate-data:
+    driver: local
+
+  # Persistent storage for Whisper models (prevents re-downloading)
+  whisper-models:
+    driver: local

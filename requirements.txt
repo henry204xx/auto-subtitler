@@ -1,0 +1,18 @@
+# Core dependencies
+numpy<2.0.0
+openai-whisper==20231117
+torch==2.1.2
+torchaudio==2.1.2
+
+# Video/Audio processing
+ffmpeg-python==0.2.0
+
+# Translation
+requests==2.31.0
+
+# Utilities
+python-dotenv==1.0.0
+
+# Web Framework
+flask==3.0.0
+werkzeug==3.0.1
