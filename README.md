@@ -1,6 +1,6 @@
 # Auto Subtitler
 
-Modern, professional web application for automated video subtitle generation and translation
+Web application for automated video subtitle generation and translation
 
 ## Features
 
