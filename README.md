@@ -130,7 +130,3 @@ auto-subtitler/
 ├── output/             # Subtitle output
 └── docker-compose.yml  # Docker configuration
 ```
-
-## License
-
-MIT License
