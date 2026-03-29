@@ -64,7 +64,6 @@ try:
 except ImportError:
     warnings.append("FFmpeg-python is not installed. Run: pip install -r requirements.txt")
 
-# Check if web_app.py exists
 print("\n✓ Checking files...")
 if not Path("web_app.py").exists():
     errors.append("web_app.py not found")

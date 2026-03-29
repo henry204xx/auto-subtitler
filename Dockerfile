@@ -1,4 +1,15 @@
 
+FROM node:20-slim AS frontend-builder
+
+WORKDIR /frontend
+
+# Copy frontend files
+COPY frontend/package*.json ./
+RUN npm install
+
+COPY frontend/ ./
+RUN npm run build
+
 FROM python:3.11-slim AS base
 
 # Install system dependencies
@@ -20,6 +31,7 @@ RUN pip install --no-cache-dir --upgrade "pip<26" "setuptools<81" wheel && \
 FROM base
 
 COPY --from=builder /root/.local /root/.local
+COPY --from=frontend-builder /frontend/dist /app/frontend/dist
 
 ENV PATH=/root/.local/bin:$PATH
 
@@ -33,4 +45,4 @@ ENV PYTHONPATH=/app
 
 VOLUME ["/app/input", "/app/output", "/root/.cache/whisper"]
 
-CMD ["python", "-m", "app.app", "--help"]
+CMD ["python", "web_app.py"]

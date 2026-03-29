@@ -1,6 +1,19 @@
 # Auto Subtitler
 
-Automated video subtitle generation and translation using OpenAI's Whisper and LibreTranslate.
+Modern, professional web application for automated video subtitle generation and translation using OpenAI's Whisper and LibreTranslate.
+
+## Features
+
+- **Modern React UI** - Clean, professional interface built with React 18, TypeScript, and Tailwind CSS
+- **AI Transcription** - Powered by OpenAI Whisper with multiple model sizes
+- **Translation** - Support for 15 languages via LibreTranslate
+- **Multiple Output Options**:
+  - **Hard-burn Subtitles** - Permanently embed subtitles into video
+  - **Soft Subtitles** - Add toggleable subtitle tracks
+  - **SRT Files** - Download subtitle files separately
+- **Real-time Progress Tracking** - Visual progress indicators for each processing stage
+- **Drag & Drop Upload** - Easy video file uploads with validation
+- **Docker Support** - One-command deployment with Docker Compose
 
 ## Quick Start
 
@@ -16,17 +29,22 @@ cp .env.example .env
 docker-compose up -d --build
 ```
 
-**That's it!** Open http://localhost:8080 in your browser.
+Open http://localhost:8080 in your browser.
 
 ### Usage
 
 #### Web Interface (Recommended)
 1. Open http://localhost:8080
-2. Drag and drop your video
+2. Drag and drop your video (or click to browse)
 3. Select source and target languages
 4. Choose Whisper model (Medium recommended)
-5. Click "Process Video"
-6. Download subtitle files when complete
+5. Select subtitle output mode:
+   - **Hard Burn**: Permanently embed subtitles (cannot be turned off)
+   - **Soft Subtitles**: Embedded as toggleable track (can be turned on/off in video player)
+   - **SRT Only**: Generate subtitle files without modifying video
+6. Click "Start Processing"
+7. Monitor real-time progress
+8. Download your files when complete
 
 
 
@@ -53,7 +71,7 @@ docker-compose up -d --build
 ## Whisper Models
 
 
-| Model  | Size   | Speed       | Quality       | Use Case          |
+| Model  | Size   | Speed       | Quality       | Use Case         |
 |--------|--------|------------|--------------|------------------|
 | tiny   | 75 MB  | Very High  | Low          | Quick tests       |
 | base   | 145 MB | High       | Moderate     | Fast processing   |
@@ -64,6 +82,13 @@ docker-compose up -d --build
 ## Supported Languages
 
 English, Spanish, French, German, Italian, Portuguese, Russian, Chinese, Japanese, Korean, Arabic, Hindi, Dutch, Polish, Turkish
+
+## Technology Stack
+
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide React Icons
+- **Backend**: Python, Flask, FFmpeg
+- **AI/ML**: OpenAI Whisper, LibreTranslate
+- **Deployment**: Docker, Docker Compose
 
 ## Configuration
 
@@ -105,7 +130,7 @@ auto-subtitler/
 ├── web_app.py          # Flask web server
 ├── app/                # CLI application
 ├── services/           # Processing services
-├── input/              # Video input (CLI mode)
+├── input/              # Video input 
 ├── output/             # Subtitle output
 └── docker-compose.yml  # Docker configuration
 ```
