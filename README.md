@@ -1,19 +1,15 @@
 # Auto Subtitler
 
-Modern, professional web application for automated video subtitle generation and translation using OpenAI's Whisper and LibreTranslate.
+Modern, professional web application for automated video subtitle generation and translation
 
 ## Features
 
-- **Modern React UI** - Clean, professional interface built with React 18, TypeScript, and Tailwind CSS
 - **AI Transcription** - Powered by OpenAI Whisper with multiple model sizes
 - **Translation** - Support for 15 languages via LibreTranslate
 - **Multiple Output Options**:
   - **Hard-burn Subtitles** - Permanently embed subtitles into video
   - **Soft Subtitles** - Add toggleable subtitle tracks
   - **SRT Files** - Download subtitle files separately
-- **Real-time Progress Tracking** - Visual progress indicators for each processing stage
-- **Drag & Drop Upload** - Easy video file uploads with validation
-- **Docker Support** - One-command deployment with Docker Compose
 
 ## Quick Start
 
