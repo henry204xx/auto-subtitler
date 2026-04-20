@@ -17,6 +17,7 @@ export interface UploadResponse {
 export interface JobStatus {
   status: 'queued' | 'processing' | 'completed' | 'error';
   progress: string;
+  progress_percent?: number;
   filename: string;
   source_lang: string;
   target_lang: string;

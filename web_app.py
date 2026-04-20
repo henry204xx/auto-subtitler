@@ -56,12 +56,14 @@ def process_video_async(job_id, video_path, source_lang, target_lang, model_size
     try:
         jobs[job_id]['status'] = 'processing'
         jobs[job_id]['progress'] = 'Extracting audio'
+        jobs[job_id]['progress_percent'] = 15
         
         # Extract audio
         audio_path = OUTPUT_DIR / f"{Path(video_path).stem}_{job_id}_audio.wav"
         extract_audio(str(video_path), str(audio_path))
         
         jobs[job_id]['progress'] = f'Transcribing with {model_size} model'
+        jobs[job_id]['progress_percent'] = 40
         
         # Transcribe
         srt_path = transcribe(str(audio_path), str(OUTPUT_DIR), model_size=model_size)
@@ -72,6 +74,7 @@ def process_video_async(job_id, video_path, source_lang, target_lang, model_size
         final_srt_path = srt_path
         if translate_needed:
             jobs[job_id]['progress'] = f'Translating from {source_lang} to {target_lang}'
+            jobs[job_id]['progress_percent'] = 65
             from app.config import LIBRETRANSLATE_URL
             translated_path = translate_srt(
                 srt_path,
@@ -82,11 +85,14 @@ def process_video_async(job_id, video_path, source_lang, target_lang, model_size
             )
             jobs[job_id]['translated_srt'] = translated_path
             final_srt_path = translated_path
+        else:
+            jobs[job_id]['progress_percent'] = 75
         
         # Embed subtitles into video if requested
         if burn_subs or soft_subs:
             embed_type = 'soft' if soft_subs else 'hard'
             jobs[job_id]['progress'] = f'Embedding subtitles into video ({embed_type})'
+            jobs[job_id]['progress_percent'] = 90
             output_video_path = OUTPUT_DIR / f"{Path(video_path).stem}_{job_id}_subtitled.mp4"
             burn_subtitles(str(video_path), final_srt_path, str(output_video_path), hard_burn=not soft_subs)
             jobs[job_id]['output_video'] = str(output_video_path)
@@ -97,10 +103,12 @@ def process_video_async(job_id, video_path, source_lang, target_lang, model_size
         
         jobs[job_id]['status'] = 'completed'
         jobs[job_id]['progress'] = 'Completed'
+        jobs[job_id]['progress_percent'] = 100
         
     except Exception as e:
         jobs[job_id]['status'] = 'error'
         jobs[job_id]['error'] = str(e)
+        jobs[job_id]['progress_percent'] = 100
         print(f"Error processing job {job_id}: {e}")
 
 
@@ -162,6 +170,7 @@ def upload_video():
     jobs[job_id] = {
         'status': 'queued',
         'progress': 'Uploaded',
+        'progress_percent': 5,
         'filename': filename,
         'source_lang': source_lang,
         'target_lang': target_lang,

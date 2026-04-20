@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 import type { JobStatus } from '../types';
 
@@ -13,6 +13,27 @@ const stages = [
   { key: 'translating', label: 'Translating' },
   { key: 'embedding', label: 'Processing Video' },
 ];
+
+type ProgressSample = {
+  percent: number;
+  at: number;
+};
+
+const formatEta = (seconds: number): string => {
+  if (seconds < 60) {
+    return `${Math.max(1, Math.round(seconds))}s remaining`;
+  }
+
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  if (mins < 60) {
+    return `${mins}m ${secs}s remaining`;
+  }
+
+  const hours = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  return `${hours}h ${remMins}m remaining`;
+};
 
 const ProgressTracker: React.FC<ProgressTrackerProps> = ({ jobStatus }) => {
   if (!jobStatus) return null;
@@ -32,10 +53,82 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ jobStatus }) => {
   const currentStage = getCurrentStageIndex();
   const isError = jobStatus.status === 'error';
   const isCompleted = jobStatus.status === 'completed';
+  const fallbackPercent = isCompleted
+    ? 100
+    : Math.round((currentStage / stages.length) * 100);
+  const rawPercent = jobStatus.progress_percent ?? fallbackPercent;
+  const progressPercent = Math.max(0, Math.min(100, rawPercent));
+  const [samples, setSamples] = useState<ProgressSample[]>([]);
+
+  useEffect(() => {
+    if (isError || isCompleted) return;
+
+    setSamples((prev) => {
+      const now = Date.now();
+      const last = prev[prev.length - 1];
+
+      // Avoid flooding history with duplicate points from polling.
+      if (last && last.percent === progressPercent) {
+        return prev;
+      }
+
+      const next = [...prev, { percent: progressPercent, at: now }];
+      return next.slice(-10);
+    });
+  }, [progressPercent, isError, isCompleted]);
+
+  const etaLabel = useMemo(() => {
+    if (isError) return null;
+    if (isCompleted || progressPercent >= 100) return 'Almost done';
+    if (samples.length < 2) return 'Estimating time remaining...';
+
+    const first = samples[0];
+    const last = samples[samples.length - 1];
+    const elapsedSec = (last.at - first.at) / 1000;
+    const deltaPercent = last.percent - first.percent;
+
+    if (elapsedSec <= 0 || deltaPercent <= 0) {
+      return 'Estimating time remaining...';
+    }
+
+    const ratePerSecond = deltaPercent / elapsedSec;
+    if (ratePerSecond <= 0) {
+      return 'Estimating time remaining...';
+    }
+
+    const remainingPercent = Math.max(0, 100 - progressPercent);
+    const etaSeconds = remainingPercent / ratePerSecond;
+
+    // Cap display for noisy estimates early in the run.
+    if (!Number.isFinite(etaSeconds) || etaSeconds > 12 * 60 * 60) {
+      return 'Estimating time remaining...';
+    }
+
+    return formatEta(etaSeconds);
+  }, [samples, isError, isCompleted, progressPercent]);
 
   return (
     <div className="card">
       <h2 className="text-xl font-semibold text-gray-900 mb-6">Processing Status</h2>
+
+      {/* Progress Bar */}
+      {!isError && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-gray-700">Overall Progress</p>
+            <p className="text-sm font-semibold text-primary-700">{progressPercent}%</p>
+          </div>
+          <div className="h-2.5 w-full rounded-full bg-gray-200 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary-600 transition-all duration-500 ease-out"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          {etaLabel && (
+            <p className="mt-2 text-xs text-gray-600">{etaLabel}</p>
+          )}
+        </div>
+      )}
 
       {/* Status Header */}
       <div className="mb-6 p-4 rounded-lg bg-gray-50 border border-gray-200">
