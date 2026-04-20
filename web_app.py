@@ -7,6 +7,7 @@ from werkzeug.utils import secure_filename
 import uuid
 from threading import Thread
 import time
+import requests
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
@@ -15,7 +16,7 @@ from services.audio_extractor import extract_audio
 from services.transcribe import transcribe
 from services.translate import translate_srt
 from services.subtitle_burner import burn_subtitles
-from app.config import INPUT_DIR, OUTPUT_DIR, WHISPER_MODEL
+from app.config import INPUT_DIR, OUTPUT_DIR, WHISPER_MODEL, LIBRETRANSLATE_URL
 
 app = Flask(__name__, static_folder='frontend/dist', static_url_path='')
 CORS(app, origins=['http://localhost:5173', 'http://localhost:8080'])
@@ -43,6 +44,53 @@ SUPPORTED_LANGUAGES = [
     {"code": "pl", "name": "Polish"},
     {"code": "tr", "name": "Turkish"},
 ]
+
+LANGUAGE_NAME_MAP = {item['code']: item['name'] for item in SUPPORTED_LANGUAGES}
+
+
+def normalize_language_code_for_ui(code):
+    """Normalize LibreTranslate language codes for frontend usage."""
+    if code == 'zh-Hans':
+        return 'zh'
+    return code
+
+
+def libretranslate_languages_url():
+    """Derive /languages endpoint from configured /translate endpoint."""
+    if LIBRETRANSLATE_URL.endswith('/translate'):
+        return LIBRETRANSLATE_URL[:-10] + '/languages'
+    return LIBRETRANSLATE_URL.rstrip('/') + '/languages'
+
+
+def get_libretranslate_languages():
+    """Fetch supported source/target languages from LibreTranslate."""
+    try:
+        response = requests.get(libretranslate_languages_url(), timeout=8)
+        response.raise_for_status()
+        languages = response.json()
+        normalized = []
+        for item in languages:
+            code = normalize_language_code_for_ui(item.get('code', ''))
+            if not code:
+                continue
+            targets = [normalize_language_code_for_ui(t) for t in item.get('targets', []) if t]
+            normalized.append({
+                'code': code,
+                'name': LANGUAGE_NAME_MAP.get(code, item.get('name', code.upper())),
+                'targets': targets,
+            })
+        return normalized
+    except Exception as e:
+        print(f"Failed to fetch LibreTranslate languages: {e}")
+        fallback = []
+        all_codes = [item['code'] for item in SUPPORTED_LANGUAGES]
+        for item in SUPPORTED_LANGUAGES:
+            fallback.append({
+                'code': item['code'],
+                'name': item['name'],
+                'targets': all_codes,
+            })
+        return fallback
 
 
 def allowed_file(filename):
@@ -129,7 +177,7 @@ def serve_static(path):
 @app.route('/api/languages', methods=['GET'])
 def get_languages():
     """Get supported languages"""
-    return jsonify(SUPPORTED_LANGUAGES)
+    return jsonify(get_libretranslate_languages())
 
 
 @app.route('/api/upload', methods=['POST'])
@@ -155,6 +203,16 @@ def upload_video():
     # Validate model size
     if model_size not in ['tiny', 'base', 'small', 'medium', 'large']:
         model_size = WHISPER_MODEL
+
+    # Validate language pair with LibreTranslate capabilities
+    translation_languages = get_libretranslate_languages()
+    language_map = {item['code']: set(item.get('targets', [])) for item in translation_languages}
+    if source_lang not in language_map:
+        return jsonify({'error': f"Source language '{source_lang}' is not supported by translation service"}), 400
+    if target_lang not in language_map:
+        return jsonify({'error': f"Target language '{target_lang}' is not supported by translation service"}), 400
+    if source_lang != target_lang and target_lang not in language_map.get(source_lang, set()):
+        return jsonify({'error': f"Translation pair '{source_lang} -> {target_lang}' is not supported"}), 400
     
     # Validate subtitle options
     if burn_subs and soft_subs:

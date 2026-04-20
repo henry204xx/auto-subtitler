@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Layout from './components/Layout';
 import VideoUpload from './components/VideoUpload';
 import ConfigForm from './components/ConfigForm';
@@ -22,6 +22,31 @@ function AppContent() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
 
+  const languageByCode = useMemo(() => {
+    return new Map(languages.map((lang) => [lang.code, lang]));
+  }, [languages]);
+
+  const targetLanguages = useMemo(() => {
+    if (!languages.length) return [];
+    const source = languageByCode.get(sourceLang);
+    const supportedTargets = source?.targets?.length
+      ? source.targets
+      : languages.map((lang) => lang.code);
+    const allowed = new Set([sourceLang, ...supportedTargets]);
+    return languages.filter((lang) => allowed.has(lang.code));
+  }, [languages, sourceLang, languageByCode]);
+
+  const sourceLanguages = useMemo(() => {
+    if (!languages.length) return [];
+    return languages.filter((lang) => {
+      if (lang.code === targetLang) return true;
+      const supportedTargets = lang.targets?.length
+        ? lang.targets
+        : languages.map((item) => item.code);
+      return supportedTargets.includes(targetLang);
+    });
+  }, [languages, targetLang]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -38,6 +63,21 @@ function AppContent() {
     };
     fetchData();
   }, [showError]);
+
+  useEffect(() => {
+    if (!languages.length) return;
+
+    const sourceStillValid = sourceLanguages.some((lang) => lang.code === sourceLang);
+    if (!sourceStillValid) {
+      setSourceLang(sourceLanguages[0]?.code ?? languages[0].code);
+      return;
+    }
+
+    const targetStillValid = targetLanguages.some((lang) => lang.code === targetLang);
+    if (!targetStillValid) {
+      setTargetLang(targetLanguages[0]?.code ?? sourceLang);
+    }
+  }, [languages, sourceLanguages, targetLanguages, sourceLang, targetLang]);
 
   useEffect(() => {
     if (!jobId || !isProcessing) return;
@@ -123,7 +163,8 @@ function AppContent() {
         {selectedFile && !isProcessing && !jobStatus && (
           <>
             <ConfigForm
-              languages={languages}
+              sourceLanguages={sourceLanguages}
+              targetLanguages={targetLanguages}
               models={models}
               sourceLang={sourceLang}
               targetLang={targetLang}

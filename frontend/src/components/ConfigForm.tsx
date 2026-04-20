@@ -3,7 +3,8 @@ import { Languages, Cpu, FileText } from 'lucide-react';
 import type { Language, WhisperModel } from '../types';
 
 interface ConfigFormProps {
-  languages: Language[];
+  sourceLanguages: Language[];
+  targetLanguages: Language[];
   models: WhisperModel[];
   sourceLang: string;
   targetLang: string;
@@ -16,7 +17,8 @@ interface ConfigFormProps {
 }
 
 const ConfigForm: React.FC<ConfigFormProps> = ({
-  languages,
+  sourceLanguages,
+  targetLanguages,
   models,
   sourceLang,
   targetLang,
@@ -44,7 +46,7 @@ const ConfigForm: React.FC<ConfigFormProps> = ({
               onChange={(e) => onSourceLangChange(e.target.value)}
               className="input"
             >
-              {languages.map((lang) => (
+              {sourceLanguages.map((lang) => (
                 <option key={lang.code} value={lang.code}>
                   {lang.name}
                 </option>
@@ -62,7 +64,7 @@ const ConfigForm: React.FC<ConfigFormProps> = ({
               onChange={(e) => onTargetLangChange(e.target.value)}
               className="input"
             >
-              {languages.map((lang) => (
+              {targetLanguages.map((lang) => (
                 <option key={lang.code} value={lang.code}>
                   {lang.name}
                 </option>
